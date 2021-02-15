@@ -71,6 +71,7 @@ class NexiaThermostat {
   private reading: boolean;
   private currentState: any;
   private accessory: string;
+  rawData: any;
 
 
   constructor(log: any, config: any, api: any) {
@@ -108,7 +109,7 @@ class NexiaThermostat {
 
 
     this.gotapi = got.extend({
-      prefixUrl: this.apiroute + "/houses/" + this.houseId,
+      prefixUrl: this.apiroute,
       headers: {
         "X-MobileId": this.xMobileId,
         "X-ApiKey": this.xApiKey,
@@ -144,22 +145,11 @@ class NexiaThermostat {
   makeStatusRequest() {
     const promise = (async () => {
       this.reading = true;
-      const body = await this.gotapi().json;
+      const body = await this.gotapi("houses/" + this.houseId).json();
       const rawData = body.result._links.child[0].data.items[this.thermostatIndex].zones[0];
       return rawData;
     });
-
-    let rawData: any;
-    promise().then(r => {
-      this.reading = false;
-      rawData = r;
-    }).catch(e => {
-      this.reading = false;
-      console.log("Error getting raw data. Error = " + e.message);
-      rawData = {};
-    });
-
-    return rawData;
+    return promise;
   }
 
   makePostRequest(url: any, payload: { value?: string | undefined; heat?: any; cool?: any; }) {
@@ -184,13 +174,24 @@ class NexiaThermostat {
     if (this.reading && this.currentState != null) {
       return this.currentState;
     }
-    const rawData = this.makeStatusRequest();
+    
+    const promise = this.makeStatusRequest();
+    promise().then(r => {
+      console.log(r);
+      this.reading = false;
+      this.rawData = r;
+    }).catch(e => {
+      this.reading = false;
+      console.log("Error getting raw data. Error = " + e.message);
+    });
+    
+    const rawData = this.rawData;
     const rawMode = rawData.current_zone_mode;
     const mappedMode = this.characteristicMap.get(rawMode);
     const rawThermostatFeature = rawData.features.find((e: { name: string; }) => e.name == "thermostat");
     const rawScale = rawThermostatFeature.scale;
     const zoneModeUrl = rawData.features.find((e: { name: string; }) => e.name == "thermostat_mode").actions.update_thermostat_mode.href;
-    const setPointUrl = rawThermostatFeature.actions.set_heat_point.href;
+    const setPointUrl = rawThermostatFeature.actions.set_heat_setpoint.href;
     const convertedScale = this.scaleMap.get(rawScale);
     const rawTemperature = rawData.temperature;
     const rawHeatingSetPoint = rawData.heating_setpoint;
