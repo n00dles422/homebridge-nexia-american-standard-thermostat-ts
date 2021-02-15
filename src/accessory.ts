@@ -65,10 +65,9 @@ class NexiaThermostat implements AccessoryPlugin {
   private readonly Characteristic: any;
   private readonly service: any;
   private readonly gotapi: any;
-  private readonly characteristicMap: Map<string, any>;
+  private readonly characteristicMap: Map<string, number>;
   private readonly scaleMap: Map<string, any>;
-  informationService: Service;
-  switchService: Service;
+  private readonly zoneModeMap: Map<number, string>;
 
 
   constructor(log: any, config: { name: string; apiroute: any; houseId: any; thermostatIndex: any; xMobileId: any; xApiKey: any; manufacturer: any; model: any; serialNumber: any; }, api: any) {
@@ -92,6 +91,10 @@ class NexiaThermostat implements AccessoryPlugin {
     this.characteristicMap.set("COOL", this.Characteristic.CurrentHeatingCoolingState.COOL);
     this.characteristicMap.set("HEAT", this.Characteristic.CurrentHeatingCoolingState.HEAT);
     this.characteristicMap.set("AUTO", this.Characteristic.CurrentHeatingCoolingState.AUTO);
+
+    this.zoneModeMap = new Map();
+    this.characteristicMap.forEach((value, key) => this.zoneModeMap.set(value, key));
+
 
     this.scaleMap = new Map();
     this.scaleMap.set("f", this.Characteristic.TemperatureDisplayUnits.FAHRENHEIT);
@@ -149,6 +152,20 @@ class NexiaThermostat implements AccessoryPlugin {
 
     return rawData;
   }
+
+  makePostRequest(url, payload) {
+    const postgot = this.gotapi().extend({
+      prefixUrl: url,
+      json: payload,
+      responseType: 'json'
+    });
+    const promise = (async () => {
+      const body = await postgot().post();
+    });
+    return promise;
+  }
+
+
   /**
    * Handle requests to get the current value of the "Current Heating Cooling State" characteristic
    */
@@ -158,7 +175,10 @@ class NexiaThermostat implements AccessoryPlugin {
     const rawData = this.makeStatusRequest();
     const rawMode = rawData.current_zone_mode;
     const mappedMode = this.characteristicMap.get(rawMode);
-    const rawScale = rawData.features.find(e => e.name == "thermostat").scale;
+    const rawThermostatFeature = rawData.features.find(e => e.name == "thermostat");
+    const rawScale = rawThermostatFeature.scale;
+    const zoneModeUrl = rawData.features.find(e => e.name == "thermostat_mode").actions.update_thermostat_mode.href;
+    const setPointUrl = rawThermostatFeature.actions.set_heat_point.href;
     const convertedScale = this.scaleMap.get(rawScale);
     const rawTemperature = rawData.temperature;
     const rawHeatingSetPoint = rawData.heating_setpoint;
@@ -180,7 +200,9 @@ class NexiaThermostat implements AccessoryPlugin {
       "temperature": this.convertTemperature(convertedScale, rawTemperature),
       "heatingSetpoint": this.convertTemperature(convertedScale, rawHeatingSetPoint),
       "coolingSetpoint": this.convertTemperature(convertedScale, rawCoolingSetPoint),
-      "targetTemperature": targetTemperature
+      "targetTemperature": targetTemperature,
+      "zoneModelUrl": zoneModeUrl,
+      "setPointUrl": setPointUrl
     };
   }
 
@@ -219,12 +241,15 @@ class NexiaThermostat implements AccessoryPlugin {
     this.handleCurrentTemperatureGet(callback);
   }
 
+
   /**
    * Handle requests to set the "Target Heating Cooling State" characteristic
    */
   handleTargetHeatingCoolingStateSet(value: any, callback: (arg0: null) => void) {
     this.log.debug('Triggered SET TargetHeatingCoolingState:' + value);
-
+    const data = this.computeState();
+    const promise = this.makePostRequest(data.zoneModelUrl, {value: this.zoneModeMap.get(value)})
+    promise().catch(e => console.log("Error setting heating cooling state: " + e.message));
     callback(null);
   }
 
@@ -255,7 +280,19 @@ class NexiaThermostat implements AccessoryPlugin {
    */
   handleTargetTemperatureSet(value: any, callback: (arg0: null) => void) {
     this.log.debug('Triggered SET TargetTemperature:' + value);
+    const data = this.computeState();
+    let payload = {heat: data.heatingSetpoint, cool: data.coolingSetpoint}
+    if (data.mappedMode == this.Characteristic.CurrentHeatingCoolingState.HEAT) {
+      payload.heat = value;
+    } else if (data.mappedMode == this.Characteristic.CurrentHeatingCoolingState.COOL) {
+      payload.cool = value;
+    } else {
+      payload.heat = value;
+      payload.cool = value;
+    }
 
+    const promise = this.makePostRequest(data.setPointUrl, payload)
+    promise().catch(e => console.log("Error setting target temperature: " + e.message));
     callback(null);
   }
 
@@ -293,8 +330,7 @@ class NexiaThermostat implements AccessoryPlugin {
    */
   getServices(): Service[] {
     return [
-      this.informationService,
-      this.switchService,
+      this.service
     ];
   }
 
