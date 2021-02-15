@@ -71,7 +71,6 @@ class NexiaThermostat {
   private reading: boolean;
   private currentState: any;
   private accessory: string;
-  rawData: any;
 
 
   constructor(log: any, config: any, api: any) {
@@ -143,13 +142,10 @@ class NexiaThermostat {
 
 
   makeStatusRequest() {
-    const promise = (async () => {
-      this.reading = true;
-      const body = await this.gotapi("houses/" + this.houseId).json();
-      const rawData = body.result._links.child[0].data.items[this.thermostatIndex].zones[0];
-      return rawData;
-    });
-    return promise;
+    this.reading = true;
+    const body = this.gotapi("houses/" + this.houseId).json();
+    const rawData = body.result._links.child[0].data.items[this.thermostatIndex].zones[0];
+    return rawData;
   }
 
   makePostRequest(url: any, payload: { value?: string | undefined; heat?: any; cool?: any; }) {
@@ -158,10 +154,7 @@ class NexiaThermostat {
       json: payload,
       responseType: 'json'
     });
-    const promise = (async () => {
-      const body = await postgot().post();
-    });
-    return promise;
+    postgot().post();
   }
 
 
@@ -174,18 +167,8 @@ class NexiaThermostat {
     if (this.reading && this.currentState != null) {
       return this.currentState;
     }
-    
-    const promise = this.makeStatusRequest();
-    promise().then(r => {
-      console.log(r);
-      this.reading = false;
-      this.rawData = r;
-    }).catch(e => {
-      this.reading = false;
-      console.log("Error getting raw data. Error = " + e.message);
-    });
-    
-    const rawData = this.rawData;
+
+    const rawData = this.makeStatusRequest();
     const rawMode = rawData.current_zone_mode;
     const mappedMode = this.characteristicMap.get(rawMode);
     const rawThermostatFeature = rawData.features.find((e: { name: string; }) => e.name == "thermostat");
@@ -263,8 +246,7 @@ class NexiaThermostat {
   handleTargetHeatingCoolingStateSet(value: any, callback: (arg0: null) => void) {
     this.log.debug('Triggered SET TargetHeatingCoolingState:' + value);
     const data = this.computeState();
-    const promise = this.makePostRequest(data.zoneModelUrl, {value: this.zoneModeMap.get(value)})
-    promise().catch(e => console.log("Error setting heating cooling state: " + e.message));
+    this.makePostRequest(data.zoneModelUrl, { value: this.zoneModeMap.get(value) })
     callback(null);
   }
 
@@ -296,7 +278,7 @@ class NexiaThermostat {
   handleTargetTemperatureSet(value: any, callback: (arg0: null) => void) {
     this.log.debug('Triggered SET TargetTemperature:' + value);
     const data = this.computeState();
-    let payload = {heat: data.heatingSetpoint, cool: data.coolingSetpoint}
+    let payload = { heat: data.heatingSetpoint, cool: data.coolingSetpoint }
     if (data.mappedMode == this.Characteristic.CurrentHeatingCoolingState.HEAT) {
       payload.heat = value;
     } else if (data.mappedMode == this.Characteristic.CurrentHeatingCoolingState.COOL) {
@@ -306,8 +288,7 @@ class NexiaThermostat {
       payload.cool = value;
     }
 
-    const promise = this.makePostRequest(data.setPointUrl, payload)
-    promise().catch(e => console.log("Error setting target temperature: " + e.message));
+    this.makePostRequest(data.setPointUrl, payload)
     callback(null);
   }
 
