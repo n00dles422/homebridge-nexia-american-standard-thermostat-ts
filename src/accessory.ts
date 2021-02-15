@@ -120,6 +120,7 @@ class NexiaThermostat {
     // create a new Thermostat service
     this.service = new this.Service.Thermostat(this.accessory);
     this.informationService = new this.Service.AccessoryInformation(this.accessory + "Information")
+      .setCharacteristic(this.Characteristic.Name, this.name)
       .setCharacteristic(this.Characteristic.Manufacturer, this.manufacturer)
       .setCharacteristic(this.Characteristic.SerialNumber, this.serialNumber)
       .setCharacteristic(this.Characteristic.Model, this.model);
