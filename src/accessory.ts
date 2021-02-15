@@ -70,6 +70,7 @@ class NexiaThermostat {
   private readonly zoneModeMap: Map<number, string>;
   private reading: boolean;
   private currentState: any;
+  private readonly informationService: any;
 
 
   constructor(log: any, config: any, api: any) {
@@ -116,6 +117,10 @@ class NexiaThermostat {
 
     // create a new Thermostat service
     this.service = new this.Service(this.Service.Thermostat);
+    this.informationService = new this.Service(this.Service.AccessoryInformation)
+      .setCharacteristic(this.Characteristic.Manufacturer, this.manufacturer)
+      .setCharacteristic(this.Characteristic.SerialNumber, this.serialNumber)
+      .setCharacteristic(this.Characteristic.Model, this.model);
 
     // create handlers for required characteristics
     this.service.getCharacteristic(this.Characteristic.CurrentHeatingCoolingState)
@@ -342,7 +347,8 @@ class NexiaThermostat {
    */
   getServices(): Service[] {
     return [
-      this.service
+      this.service,
+      this.informationService
     ];
   }
 
