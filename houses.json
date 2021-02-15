@@ -2,8 +2,8 @@
     "success": true,
     "error": null,
     "result": {
-        "id": <house_id>,
-        "name": <name>,
+        "id": "<house_id>",
+        "name": "<name>",
         "third_party_integrations": [],
         "latitude": 37.34,
         "longitude": -122.11,
@@ -22,7 +22,7 @@
                 "type": "application/vnd.nexia.collection+json",
                 "data": {
                     "items": [{
-                        "id": <device_id>,
+                        "id":"<device_id>",
                         "name": "my house",
                         "name_editable": true,
                         "features": [{
@@ -520,7 +520,7 @@
                         "manufacturer": "Trane",
                         "zones": [{
                             "type": "xxl_zone",
-                            "id": <zone_id>,
+                            "id": "<zone_id>",
                             "name": "NativeZone",
                             "current_zone_mode": "HEAT",
                             "temperature": 70,

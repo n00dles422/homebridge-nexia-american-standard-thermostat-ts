@@ -45,7 +45,7 @@ export = (api: API) => {
   api.registerAccessory("NexiaThermostat", NexiaThermostat);
 };
 
-class NexiaThermostat implements AccessoryPlugin {
+class NexiaThermostat {
 
   private readonly log: Logging;
   private readonly name: string;
@@ -68,9 +68,11 @@ class NexiaThermostat implements AccessoryPlugin {
   private readonly characteristicMap: Map<string, number>;
   private readonly scaleMap: Map<string, any>;
   private readonly zoneModeMap: Map<number, string>;
+  private reading: boolean;
+  private currentState: any;
 
 
-  constructor(log: any, config: { name: string; apiroute: any; houseId: any; thermostatIndex: any; xMobileId: any; xApiKey: any; manufacturer: any; model: any; serialNumber: any; }, api: any) {
+  constructor(log: any, config: any, api: any) {
     this.log = log;
     this.config = config;
     // extract name from config
@@ -99,6 +101,7 @@ class NexiaThermostat implements AccessoryPlugin {
     this.scaleMap = new Map();
     this.scaleMap.set("f", this.Characteristic.TemperatureDisplayUnits.FAHRENHEIT);
     this.scaleMap.set("c", this.Characteristic.TemperatureDisplayUnits.CELSIUS);
+    this.reading = false;
 
 
 
@@ -138,14 +141,18 @@ class NexiaThermostat implements AccessoryPlugin {
 
   makeStatusRequest() {
     const promise = (async () => {
+      this.reading = true;
       const body = await this.gotapi().json;
       const rawData = body.result._links.child[0].data.items[this.thermostatIndex].zones[0];
       return rawData;
     });
+
     let rawData: any;
     promise().then(r => {
+      this.reading = false;
       rawData = r;
     }).catch(e => {
+      this.reading = false;
       console.log("Error getting raw data. Error = " + e.message);
       rawData = {};
     });
@@ -153,7 +160,7 @@ class NexiaThermostat implements AccessoryPlugin {
     return rawData;
   }
 
-  makePostRequest(url, payload) {
+  makePostRequest(url: any, payload: { value?: string | undefined; heat?: any; cool?: any; }) {
     const postgot = this.gotapi().extend({
       prefixUrl: url,
       json: payload,
@@ -172,12 +179,15 @@ class NexiaThermostat implements AccessoryPlugin {
 
 
   computeState() {
+    if (this.reading && this.currentState != null) {
+      return this.currentState;
+    }
     const rawData = this.makeStatusRequest();
     const rawMode = rawData.current_zone_mode;
     const mappedMode = this.characteristicMap.get(rawMode);
-    const rawThermostatFeature = rawData.features.find(e => e.name == "thermostat");
+    const rawThermostatFeature = rawData.features.find((e: { name: string; }) => e.name == "thermostat");
     const rawScale = rawThermostatFeature.scale;
-    const zoneModeUrl = rawData.features.find(e => e.name == "thermostat_mode").actions.update_thermostat_mode.href;
+    const zoneModeUrl = rawData.features.find((e: { name: string; }) => e.name == "thermostat_mode").actions.update_thermostat_mode.href;
     const setPointUrl = rawThermostatFeature.actions.set_heat_point.href;
     const convertedScale = this.scaleMap.get(rawScale);
     const rawTemperature = rawData.temperature;
@@ -191,7 +201,7 @@ class NexiaThermostat implements AccessoryPlugin {
       targetTemperature = this.convertTemperature(convertedScale, rawCoolingSetPoint);
     }
 
-    return {
+    const state = {
       "rawData": rawData,
       "mappedMode": mappedMode,
       "rawTemperature": rawTemperature,
@@ -204,6 +214,8 @@ class NexiaThermostat implements AccessoryPlugin {
       "zoneModelUrl": zoneModeUrl,
       "setPointUrl": setPointUrl
     };
+    this.currentState = state;
+    return state;
   }
 
   handleCurrentHeatingCoolingStateGet(callback: (arg0: null, arg1: any) => void) {

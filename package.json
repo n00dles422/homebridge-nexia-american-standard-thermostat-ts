@@ -6,10 +6,12 @@
   "type": "module",
   "scripts": {
     "clean": "rimraf ./dist",
-    "build": "rimraf ./dist && tsc",
-    "prepublishOnly": "npm run build",
     "postpublish": "npm run clean",
-    "test": "mocha"
+    "test": "mocha",
+    "lint": "eslint src/**.ts --max-warnings=0",
+    "watch": "npm run build && npm link && nodemon",
+    "build": "rimraf ./dist && tsc",
+    "prepublishOnly": "npm run lint && npm run build"
   },
   "dependencies": {
     "ts-node": "^9.1.1",
