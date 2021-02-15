@@ -178,7 +178,7 @@ class NexiaThermostat {
     
     const zoneModeUrl = rawThermostatMode.actions.update_thermostat_mode.href;
     let setPointUrl;
-    if (rawThermostatFeature.actions != null) {
+    if (rawThermostatFeature.actions.set_heat_point != null) {
       setPointUrl = rawThermostatFeature.actions.set_heat_point.href;
     }
     const convertedScale = this.scaleMap.get(rawScale);
@@ -192,7 +192,7 @@ class NexiaThermostat {
     } else {
       targetTemperature = this.convertTemperature(convertedScale, rawCoolingSetPoint);
     }
-
+    console.log("Raw data", rawTemperature, rawHeatingSetPoint, rawCoolingSetPoint, rawScale);
     const state = {
       "rawData": rawData,
       "mappedMode": mappedMode,
@@ -263,7 +263,7 @@ class NexiaThermostat {
   handleTargetHeatingCoolingStateGet(callback: any) {
     this.log.debug('Triggered GET TargetHeatingCoolingState');
 
-    this.handleCurrentTemperatureGet(callback);
+    this.computeState((state: { mappedMode: string; }) => { callback(null, state.mappedMode); });
   }
 
 
