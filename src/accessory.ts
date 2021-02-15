@@ -71,6 +71,7 @@ class NexiaThermostat {
   private reading: boolean;
   private currentState: any;
   private readonly informationService: any;
+  private accessory: string;
 
 
   constructor(log: any, config: any, api: any) {
@@ -78,6 +79,7 @@ class NexiaThermostat {
     this.config = config;
     // extract name from config
     this.name = config.name;
+    this.accessory = config.accessory;
     this.apiroute = config.apiroute;
     this.houseId = config.houseId;
     this.thermostatIndex = config.thermostatIndex;
@@ -116,7 +118,7 @@ class NexiaThermostat {
     });
 
     // create a new Thermostat service
-    this.service = new this.Service(this.Service.Thermostat, this.name);
+    this.service = new this.Service.Thermostat(this.accessory);
     this.informationService = new this.Service(this.Service.AccessoryInformation)
       .setCharacteristic(this.Characteristic.Manufacturer, this.manufacturer)
       .setCharacteristic(this.Characteristic.SerialNumber, this.serialNumber)
