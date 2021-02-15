@@ -173,9 +173,14 @@ class NexiaThermostat {
     const rawMode = rawData.current_zone_mode;
     const mappedMode = this.characteristicMap.get(rawMode);
     const rawThermostatFeature = rawData.features.find((e: { name: string; }) => e.name == "thermostat");
+    const rawThermostatMode = rawData.features.find((e: { name: string; }) => e.name == "thermostat_mode");
     const rawScale = rawThermostatFeature.scale;
-    const zoneModeUrl = rawData.features.find((e: { name: string; }) => e.name == "thermostat_mode").actions.update_thermostat_mode.href;
-    const setPointUrl = rawThermostatFeature.actions.set_heat_point.href;
+    
+    const zoneModeUrl = rawThermostatMode.actions.update_thermostat_mode.href;
+    let setPointUrl;
+    if (rawThermostatFeature.actions != null) {
+      setPointUrl = rawThermostatFeature.actions.set_heat_point.href;
+    }
     const convertedScale = this.scaleMap.get(rawScale);
     const rawTemperature = rawData.temperature;
     const rawHeatingSetPoint = rawData.heating_setpoint;
@@ -201,7 +206,7 @@ class NexiaThermostat {
       "zoneModelUrl": zoneModeUrl,
       "setPointUrl": setPointUrl
     };
-    
+
     this.currentState = state;
     return state;
   }
@@ -213,7 +218,9 @@ class NexiaThermostat {
 
     const promise = this.makeStatusRequest();
     promise()
-      .then(this.parseRawData)
+      .then(rawData => {
+        return this.parseRawData(rawData);
+      })
       .then(state => {
         callback(state);
       })
