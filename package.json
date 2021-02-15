@@ -1,9 +1,8 @@
 {
   "name": "homebridge-nexia-thermostat-ts",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Homebridge Nexia plugin in Typescript",
   "main": "dist/accessory.js",
-  "type": "module",
   "scripts": {
     "clean": "rimraf ./dist",
     "postpublish": "npm run clean",
