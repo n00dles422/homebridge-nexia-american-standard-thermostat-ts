@@ -142,10 +142,14 @@ class NexiaThermostat {
 
 
   makeStatusRequest() {
-    this.reading = true;
-    const body = this.gotapi("houses/" + this.houseId).json();
-    const rawData = body.result._links.child[0].data.items[this.thermostatIndex].zones[0];
-    return rawData;
+    const promise = (async () => {
+      this.reading = true;
+      const body = await this.gotapi("houses/" + this.houseId).json();
+      this.reading = false;
+      const rawData = body.result._links.child[0].data.items[this.thermostatIndex].zones[0];
+      return rawData;
+    });
+    return promise;
   }
 
   makePostRequest(url: any, payload: { value?: string | undefined; heat?: any; cool?: any; }) {
@@ -154,7 +158,10 @@ class NexiaThermostat {
       json: payload,
       responseType: 'json'
     });
-    postgot().post();
+    const promise = (async () => {
+      const body = await postgot().post();
+    });
+    return promise;
   }
 
 
@@ -162,19 +169,13 @@ class NexiaThermostat {
    * Handle requests to get the current value of the "Current Heating Cooling State" characteristic
    */
 
-
-  computeState() {
-    if (this.reading && this.currentState != null) {
-      return this.currentState;
-    }
-
-    const rawData = this.makeStatusRequest();
+  parseRawData(rawData: { current_zone_mode: any; features: any[]; temperature: any; heating_setpoint: any; cooling_setpoint: any; }) {
     const rawMode = rawData.current_zone_mode;
     const mappedMode = this.characteristicMap.get(rawMode);
     const rawThermostatFeature = rawData.features.find((e: { name: string; }) => e.name == "thermostat");
     const rawScale = rawThermostatFeature.scale;
     const zoneModeUrl = rawData.features.find((e: { name: string; }) => e.name == "thermostat_mode").actions.update_thermostat_mode.href;
-    const setPointUrl = rawThermostatFeature.actions.set_heat_setpoint.href;
+    const setPointUrl = rawThermostatFeature.actions.set_heat_point.href;
     const convertedScale = this.scaleMap.get(rawScale);
     const rawTemperature = rawData.temperature;
     const rawHeatingSetPoint = rawData.heating_setpoint;
@@ -200,14 +201,33 @@ class NexiaThermostat {
       "zoneModelUrl": zoneModeUrl,
       "setPointUrl": setPointUrl
     };
+    
     this.currentState = state;
     return state;
   }
 
+  computeState(callback: any) {
+    if (this.reading && this.currentState != null) {
+      return this.currentState;
+    }
+
+    const promise = this.makeStatusRequest();
+    promise()
+      .then(this.parseRawData)
+      .then(state => {
+        callback(state);
+      })
+      .catch(e => {
+        this.reading = false;
+        console.log("Error getting raw data. Error = " + e.message);
+      });
+  }
+
   handleCurrentHeatingCoolingStateGet(callback: (arg0: null, arg1: any) => void) {
     this.log.debug('Triggered GET CurrentHeatingCoolingState');
-    const data = this.computeState();
-    callback(null, data.mappedMode);
+    this.computeState((state: { mappedModel: any; }) => {
+      callback(null, state.mappedModel);
+    });
   }
 
   convertFahrenheitToCelcius(value: number) {
@@ -245,9 +265,9 @@ class NexiaThermostat {
    */
   handleTargetHeatingCoolingStateSet(value: any, callback: (arg0: null) => void) {
     this.log.debug('Triggered SET TargetHeatingCoolingState:' + value);
-    const data = this.computeState();
-    this.makePostRequest(data.zoneModelUrl, { value: this.zoneModeMap.get(value) })
-    callback(null);
+    this.computeState((state: { zoneModelUrl: string; }) => {
+      this.makePostRequest(state.zoneModelUrl, { value: this.zoneModeMap.get(value) })().then(v => callback(null));
+    });
   }
 
   /**
@@ -255,9 +275,7 @@ class NexiaThermostat {
    */
   handleCurrentTemperatureGet(callback: (arg0: null, arg1: number) => void) {
     this.log.debug('Triggered GET CurrentTemperature');
-    const data = this.computeState();
-
-    callback(null, data.temperature);
+    this.computeState((state: { temperature: number; }) => { callback(null, state.temperature); });
   }
 
 
@@ -266,10 +284,7 @@ class NexiaThermostat {
    */
   handleTargetTemperatureGet(callback: (arg0: null, arg1: number) => void) {
     this.log.debug('Triggered GET TargetTemperature');
-
-    const data = this.computeState();
-
-    callback(null, data.targetTemperature);
+    this.computeState((state: { targetTemperature: number; }) => { callback(null, state.targetTemperature); });
   }
 
   /**
@@ -277,19 +292,19 @@ class NexiaThermostat {
    */
   handleTargetTemperatureSet(value: any, callback: (arg0: null) => void) {
     this.log.debug('Triggered SET TargetTemperature:' + value);
-    const data = this.computeState();
-    let payload = { heat: data.heatingSetpoint, cool: data.coolingSetpoint }
-    if (data.mappedMode == this.Characteristic.CurrentHeatingCoolingState.HEAT) {
-      payload.heat = value;
-    } else if (data.mappedMode == this.Characteristic.CurrentHeatingCoolingState.COOL) {
-      payload.cool = value;
-    } else {
-      payload.heat = value;
-      payload.cool = value;
-    }
-
-    this.makePostRequest(data.setPointUrl, payload)
-    callback(null);
+    this.computeState((state: { heatingSetpoint: any; coolingSetpoint: any; mappedMode: any; setPointUrl: string }) => {
+      let payload = { heat: state.heatingSetpoint, cool: state.coolingSetpoint }
+      if (state.mappedMode == this.Characteristic.CurrentHeatingCoolingState.HEAT) {
+        payload.heat = value;
+      } else if (state.mappedMode == this.Characteristic.CurrentHeatingCoolingState.COOL) {
+        payload.cool = value;
+      } else {
+        payload.heat = value;
+        payload.cool = value;
+      }
+  
+      this.makePostRequest(state.setPointUrl, payload)().then(v => callback(null));
+    })
   }
 
   /**
@@ -298,9 +313,7 @@ class NexiaThermostat {
   handleTemperatureDisplayUnitsGet(callback: (arg0: null, arg1: any) => void) {
     this.log.debug('Triggered GET TemperatureDisplayUnits');
 
-    const data = this.computeState();
-
-    callback(null, data.scale);
+    this.computeState((state: { scale: number; }) => { callback(null, state.scale); });
   }
 
   /**
