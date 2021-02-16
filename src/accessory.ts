@@ -71,6 +71,7 @@ class NexiaThermostat {
   private reading: boolean;
   private currentState: any;
   private accessory: string;
+  private currentTemperatureScale: number;
 
 
   constructor(log: any, config: any, api: any) {
@@ -95,6 +96,8 @@ class NexiaThermostat {
     this.characteristicMap.set("COOL", this.Characteristic.CurrentHeatingCoolingState.COOL);
     this.characteristicMap.set("HEAT", this.Characteristic.CurrentHeatingCoolingState.HEAT);
     this.characteristicMap.set("AUTO", this.Characteristic.CurrentHeatingCoolingState.AUTO);
+    this.characteristicMap.set("OFF", this.Characteristic.CurrentHeatingCoolingState.OFF);
+
 
     this.zoneModeMap = new Map();
     this.characteristicMap.forEach((value, key) => this.zoneModeMap.set(value, key));
@@ -104,7 +107,7 @@ class NexiaThermostat {
     this.scaleMap.set("f", this.Characteristic.TemperatureDisplayUnits.FAHRENHEIT);
     this.scaleMap.set("c", this.Characteristic.TemperatureDisplayUnits.CELSIUS);
     this.reading = false;
-
+    this.currentTemperatureScale = this.Characteristic.TemperatureDisplayUnits.CELSIUS; //default to C
 
 
     this.gotapi = got.extend({
@@ -153,13 +156,11 @@ class NexiaThermostat {
   }
 
   makePostRequest(url: any, payload: { value?: string | undefined; heat?: any; cool?: any; }) {
-    const postgot = this.gotapi().extend({
-      prefixUrl: url,
-      json: payload,
-      responseType: 'json'
-    });
+    
     const promise = (async () => {
-      const body = await postgot().post();
+      const body = await this.gotapi.post(url, {
+        json: payload
+      });
     });
     return promise;
   }
@@ -192,7 +193,7 @@ class NexiaThermostat {
     } else {
       targetTemperature = this.convertTemperature(convertedScale, rawCoolingSetPoint);
     }
-    console.log("Raw data", rawTemperature, rawHeatingSetPoint, rawCoolingSetPoint, rawScale);
+    
     const state = {
       "rawData": rawData,
       "mappedMode": mappedMode,
@@ -232,8 +233,9 @@ class NexiaThermostat {
 
   handleCurrentHeatingCoolingStateGet(callback: (arg0: null, arg1: any) => void) {
     this.log.debug('Triggered GET CurrentHeatingCoolingState');
-    this.computeState((state: { mappedModel: any; }) => {
-      callback(null, state.mappedModel);
+    this.computeState((state: { mappedMode: any; }) => {
+      console.log("target heating/cooling state", state);
+      callback(null, state.mappedMode);
     });
   }
 
@@ -246,7 +248,7 @@ class NexiaThermostat {
   }
 
   convertTemperature(scale: any, value: number) {
-    const currentScale = this.Characteristic.TemperatureDisplayUnits;
+    const currentScale = this.currentTemperatureScale;
     if (scale != currentScale) {
       if (currentScale == this.Characteristic.TemperatureDisplayUnits.CELSIUS) {
         return this.convertFahrenheitToCelcius(value);
@@ -263,7 +265,9 @@ class NexiaThermostat {
   handleTargetHeatingCoolingStateGet(callback: any) {
     this.log.debug('Triggered GET TargetHeatingCoolingState');
 
-    this.computeState((state: { mappedMode: string; }) => { callback(null, state.mappedMode); });
+    this.computeState((state: { mappedMode: string; }) => { 
+      console.log("target heating/cooling state", state);
+      callback(null, state.mappedMode); });
   }
 
 
@@ -273,7 +277,9 @@ class NexiaThermostat {
   handleTargetHeatingCoolingStateSet(value: any, callback: (arg0: null) => void) {
     this.log.debug('Triggered SET TargetHeatingCoolingState:' + value);
     this.computeState((state: { zoneModelUrl: string; }) => {
-      this.makePostRequest(state.zoneModelUrl, { value: this.zoneModeMap.get(value) })().then(v => callback(null));
+      this.makePostRequest(state.zoneModelUrl, { value: this.zoneModeMap.get(value) })()
+      .then(v => callback(null))
+      .catch(e => console.log("Error setting target heating/cooling state.", e.message));
     });
   }
 
@@ -282,7 +288,9 @@ class NexiaThermostat {
    */
   handleCurrentTemperatureGet(callback: (arg0: null, arg1: number) => void) {
     this.log.debug('Triggered GET CurrentTemperature');
-    this.computeState((state: { temperature: number; }) => { callback(null, state.temperature); });
+    this.computeState((state: { temperature: number; }) => { 
+      console.log("current temperature", state);
+      callback(null, state.temperature); });
   }
 
 
@@ -291,7 +299,9 @@ class NexiaThermostat {
    */
   handleTargetTemperatureGet(callback: (arg0: null, arg1: number) => void) {
     this.log.debug('Triggered GET TargetTemperature');
-    this.computeState((state: { targetTemperature: number; }) => { callback(null, state.targetTemperature); });
+    this.computeState((state: { targetTemperature: number; }) => { 
+      console.log("target temperature", state);
+      callback(null, state.targetTemperature); });
   }
 
   /**
@@ -309,8 +319,10 @@ class NexiaThermostat {
         payload.heat = value;
         payload.cool = value;
       }
-  
-      this.makePostRequest(state.setPointUrl, payload)().then(v => callback(null));
+      console.log("payload temperature set", payload);
+      this.makePostRequest(state.setPointUrl, payload)()
+      .then(v => callback(null))
+      .catch(e => console.log("Error setting target temperature", e.message));;
     })
   }
 
@@ -320,7 +332,9 @@ class NexiaThermostat {
   handleTemperatureDisplayUnitsGet(callback: (arg0: null, arg1: any) => void) {
     this.log.debug('Triggered GET TemperatureDisplayUnits');
 
-    this.computeState((state: { scale: number; }) => { callback(null, state.scale); });
+    this.computeState((state: { scale: number; }) => { 
+      console.log("scale", state);
+      callback(null, state.scale); });
   }
 
   /**
@@ -328,7 +342,7 @@ class NexiaThermostat {
    */
   handleTemperatureDisplayUnitsSet(value: any, callback: (arg0: null) => void) {
     this.log.debug('Triggered SET TemperatureDisplayUnits:' + value);
-
+    this.currentTemperatureScale = value;
     callback(null);
   }
 
