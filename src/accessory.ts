@@ -69,7 +69,6 @@ class NexiaThermostat {
   private readonly characteristicMap: Map<string, number>;
   private readonly scaleMap: Map<string, any>;
   private readonly zoneModeMap: Map<number, string>;
-  private reading: boolean;
   private currentState: any;
   private accessory: string;
   private currentTemperatureScale: number;
@@ -106,7 +105,6 @@ class NexiaThermostat {
     this.scaleMap = new Map();
     this.scaleMap.set("f", this.Characteristic.TemperatureDisplayUnits.FAHRENHEIT);
     this.scaleMap.set("c", this.Characteristic.TemperatureDisplayUnits.CELSIUS);
-    this.reading = false;
     this.currentTemperatureScale = this.Characteristic.TemperatureDisplayUnits.CELSIUS; //default to C
 
     const headers = {
@@ -151,9 +149,7 @@ class NexiaThermostat {
 
   makeStatusRequest() {
     const promise = (async () => {
-      this.reading = true;
       const body = await this.gotapiGet("houses/" + this.houseId).json();
-      this.reading = false;
       const rawData = body.result._links.child[0].data.items[this.thermostatIndex].zones[0];
       return rawData;
     });
@@ -219,10 +215,6 @@ class NexiaThermostat {
   }
 
   computeState(callback: any) {
-    if (this.reading && this.currentState != null) {
-      return this.currentState;
-    }
-
     const promise = this.makeStatusRequest();
     promise()
       .then(rawData => {
@@ -232,8 +224,8 @@ class NexiaThermostat {
         callback(state);
       })
       .catch(e => {
-        this.reading = false;
         this.log.error("Error getting raw data. Error = " + e.message);
+        callback(this.currentState);
       });
   }
 
@@ -285,7 +277,10 @@ class NexiaThermostat {
     this.computeState((state: { zoneModelUrl: string; }) => {
       this.makePostRequest(state.zoneModelUrl, { value: this.zoneModeMap.get(value) })()
       .then(v => callback(null))
-      .catch(e => this.log.error("Error setting target heating/cooling state.", e.message, e.options));
+      .catch(e => {
+        this.log.error("Error setting target heating/cooling state.", e.message, e.options);
+        callback(null);
+      });
     });
   }
 
@@ -332,7 +327,9 @@ class NexiaThermostat {
       this.log.debug("payload temperature set", payload);
       this.makePostRequest(state.setPointUrl, payload)()
       .then(v => callback(null))
-      .catch(e => this.log.error("Error setting target temperature", e.message, e.options));;
+      .catch(e => {
+        this.log.error("Error setting target temperature", e.message, e.options)
+      });
     })
   }
 
