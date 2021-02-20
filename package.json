@@ -1,6 +1,6 @@
 {
   "name": "homebridge-nexia-thermostat-ts",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "Homebridge Nexia plugin in Typescript",
   "main": "dist/accessory.js",
   "scripts": {
@@ -17,7 +17,7 @@
     "ts-node": "^9.1.1",
     "typescript": "^3.8.3"
   },
-  "author": "Andreas Bauer <mail@anderl-bauer.de>",
+  "author": "@cuperteeno <inalip.luhar@gmail.com>",
   "engines": {
     "homebridge": ">=1.0.0"
   },
@@ -31,10 +31,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/homebridge/homebridge-examples.git"
+    "url": "git://github.com/rahulpilani/homebridge-nexia-thermostat-ts.git"
   },
   "bugs": {
-    "url": "http://github.com/homebridge/homebridge-examples/issues"
+    "url": "https://github.com/rahulpilani/homebridge-nexia-thermostat-ts/issues"
   },
   "devDependencies": {
     "@types/node": "10.17.19",
@@ -45,5 +45,5 @@
     "mocha": "^8.3.0",
     "rimraf": "^3.0.2"
   },
-  "homepage": "https://github.com/homebridge/homebridge-examples#readme"
+  "homepage": "https://github.com/rahulpilani/homebridge-nexia-thermostat-ts/blob/master/README.md"
 }
