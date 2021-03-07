@@ -92,14 +92,16 @@ class NexiaThermostat {
     this.Characteristic = this.api.hap.Characteristic;
 
     this.characteristicMap = new Map();
-    this.characteristicMap.set("COOL", this.Characteristic.CurrentHeatingCoolingState.COOL);
     this.characteristicMap.set("HEAT", this.Characteristic.CurrentHeatingCoolingState.HEAT);
-    this.characteristicMap.set("AUTO", this.Characteristic.CurrentHeatingCoolingState.AUTO);
+    this.characteristicMap.set("COOL", this.Characteristic.CurrentHeatingCoolingState.COOL);
     this.characteristicMap.set("OFF", this.Characteristic.CurrentHeatingCoolingState.OFF);
 
 
     this.zoneModeMap = new Map();
-    this.characteristicMap.forEach((value, key) => this.zoneModeMap.set(value, key));
+    this.zoneModeMap.set(this.Characteristic.TargetHeatingCoolingState.OFF, "OFF");
+    this.zoneModeMap.set(this.Characteristic.TargetHeatingCoolingState.HEAT, "HEAT");
+    this.zoneModeMap.set(this.Characteristic.TargetHeatingCoolingState.COOL, "COOL");
+    this.zoneModeMap.set(this.Characteristic.TargetHeatingCoolingState.AUTO, "AUTO");
 
 
     this.scaleMap = new Map();
@@ -174,7 +176,8 @@ class NexiaThermostat {
 
   parseRawData(rawData: { current_zone_mode: any; features: any[]; temperature: any; heating_setpoint: any; cooling_setpoint: any; }) {
     const rawMode = rawData.current_zone_mode;
-    const mappedMode = this.characteristicMap.get(rawMode);
+    let mappedMode = this.characteristicMap.get(rawMode);
+    
     const rawThermostatFeature = rawData.features.find((e: { name: string; }) => e.name == "thermostat");
     const rawThermostatMode = rawData.features.find((e: { name: string; }) => e.name == "thermostat_mode");
     const rawScale = rawThermostatFeature.scale;
@@ -192,6 +195,16 @@ class NexiaThermostat {
     const rawTemperature = rawData.temperature;
     const rawHeatingSetPoint = rawData.heating_setpoint;
     const rawCoolingSetPoint = rawData.cooling_setpoint;
+    if (rawMode == 'AUTO') { //Special handling for auto
+      mappedMode = this.Characteristic.CurrentHeatingCoolingState.HEAT; //default to heat for now.
+      if (rawTemperature < rawHeatingSetPoint) {
+        mappedMode = this.Characteristic.CurrentHeatingCoolingState.HEAT;
+      } 
+      if (rawTemperature > rawCoolingSetPoint) {
+        mappedMode = this.Characteristic.CurrentHeatingCoolingState.COOL;
+      }
+    }
+    
     let targetTemperature;
 
     if (mappedMode == this.Characteristic.CurrentHeatingCoolingState.HEAT) {
