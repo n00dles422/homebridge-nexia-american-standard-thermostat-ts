@@ -183,6 +183,10 @@ class NexiaThermostat {
     let setPointUrl;
     if (rawThermostatFeature.actions.set_heat_setpoint != null) {
       setPointUrl = rawThermostatFeature.actions.set_heat_setpoint.href;
+    } else if (rawThermostatFeature.actions.set_cool_setpoint != null) {
+      setPointUrl = rawThermostatFeature.actions.set_cool_setpoint.href;
+    } else {
+      setPointUrl = zoneModeUrl.replace('zone_mode', 'setpoints');
     }
     const convertedScale = this.scaleMap.get(rawScale);
     const rawTemperature = rawData.temperature;
