@@ -32,7 +32,8 @@ Now click the "Mobile" button in the header to add a new device (which is really
 
 ## 5. Get the API Key and Mobile ID
 Next, we'll use a script I wrote called nexia.js to activate this new mobile connection:
-```const nexiaApi = require('@cdmnky/nexia-api');
+```JS
+const nexiaApi = require('@cdmnky/nexia-api');
 
 // Replace this with the code you got from MyNexia.com in Step 4
 const activation_code = 123456789012;
