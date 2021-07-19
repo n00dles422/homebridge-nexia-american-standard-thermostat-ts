@@ -114,7 +114,7 @@ class NexiaThermostat {
     this.scaleMap.set("c", this.Characteristic.TemperatureDisplayUnits.CELSIUS);
     this.currentTemperatureScale = this.Characteristic.TemperatureDisplayUnits.CELSIUS; //default to C
 
-    let headers: {
+    const headers: {
       "X-MobileId": string, 
       "X-ApiKey": string, 
       "Content-Type": string, 
