@@ -59,6 +59,8 @@ Time to update the Homebridge config to replace the placeholders from step 2.
 "xApiKey" is the API Key you got in Step 5. Yes keep the x in front of the key name.
 "manufacturer", "model" and "serialNumber" can be anything.
 
+If you are on the new American Standard Home service, make sure you set "X-AppVersion" to the latest app version (`5.16.0` at the time of writing) and set "X-AssociatedBrand" to `asair` in your config.
+
 ## 7. Cleanup
 You can remove the nexia-api npm module and nexia.js once you have the Mobile ID and API keys.
 
