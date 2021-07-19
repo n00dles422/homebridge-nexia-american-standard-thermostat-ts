@@ -56,6 +56,8 @@ class NexiaThermostat {
   private readonly thermostatIndex: number;
   private readonly xMobileId: string;
   private readonly xApiKey: string;
+  private readonly xAppVersion: string;
+  private readonly xAssociatedBrand: string;
   private readonly manufacturer: string;
   private readonly model: string;
   private readonly config: any;
@@ -84,6 +86,9 @@ class NexiaThermostat {
     this.thermostatIndex = config.thermostatIndex;
     this.xMobileId = config.xMobileId;
     this.xApiKey = config.xApiKey;
+    this.xAppVersion = config.xAppVersion || "";
+    this.xAssociatedBrand = config.xAssociatedBrand || "";
+    
     this.manufacturer = config.manufacturer;
     this.model = config.model;
     this.serialNumber = config.serialNumber;
@@ -109,11 +114,19 @@ class NexiaThermostat {
     this.scaleMap.set("c", this.Characteristic.TemperatureDisplayUnits.CELSIUS);
     this.currentTemperatureScale = this.Characteristic.TemperatureDisplayUnits.CELSIUS; //default to C
 
-    const headers = {
+    let headers: {
+      "X-MobileId": string, 
+      "X-ApiKey": string, 
+      "Content-Type": string, 
+      "X-AppVersion"?: string, 
+      "X-AssociatedBrand"?: string
+    } = {
       "X-MobileId": this.xMobileId,
       "X-ApiKey": this.xApiKey,
       "Content-Type": "application/json"
     }
+    if(this.xAppVersion) headers["X-AppVersion"] = this.xAppVersion;
+    if(this.xAssociatedBrand) headers["X-AssociatedBrand"] = this.xAssociatedBrand
 
     this.gotapiGet = got.extend({
       prefixUrl: this.apiroute,
