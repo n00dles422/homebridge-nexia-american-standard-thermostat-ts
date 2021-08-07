@@ -1,13 +1,13 @@
 {
-  "name": "@dugganb/homebridge-nexia-thermostat-ts",
+  "name": "homebridge-nexia-american-standard-thermostat-ts",
   "version": "0.3.8",
-  "description": "Homebridge Nexia plugin in Typescript",
+  "description": "Homebridge Nexia and American Standard plugin in Typescript",
   "main": "dist/accessory.js",
   "scripts": {
     "clean": "rimraf ./dist",
     "postpublish": "npm run clean",
     "test": "mocha",
-    "lint": "eslint src/**.ts --max-warnings=0",
+    "lint": "eslint src/**.ts",
     "watch": "npm run build && npm link && nodemon",
     "build": "rimraf ./dist && tsc",
     "prepublishOnly": "npm run lint && npm run build"
