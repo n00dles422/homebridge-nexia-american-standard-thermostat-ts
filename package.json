@@ -1,6 +1,6 @@
 {
   "name": "homebridge-nexia-american-standard-thermostat-ts",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "description": "Homebridge Nexia and American Standard plugin in Typescript",
   "main": "dist/accessory.js",
   "scripts": {
@@ -31,10 +31,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/DugganB/homebridge-nexia-thermostat-ts.git"
+    "url": "git://github.com/DugganB/homebridge-nexia-american-standard-thermostat-ts.git"
   },
   "bugs": {
-    "url": "https://github.com/DugganB/homebridge-nexia-thermostat-ts/issues"
+    "url": "https://github.com/DugganB/homebridge-nexia-american-standard-thermostat-ts/issues"
   },
   "devDependencies": {
     "@types/node": "10.17.19",
@@ -45,5 +45,5 @@
     "mocha": "^8.3.0",
     "rimraf": "^3.0.2"
   },
-  "homepage": "https://github.com/DugganB/homebridge-nexia-thermostat-ts#readme"
+  "homepage": "https://github.com/DugganB/homebridge-nexia-american-standard-thermostat-ts#readme"
 }
