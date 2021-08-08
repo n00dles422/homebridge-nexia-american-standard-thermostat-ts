@@ -1,6 +1,6 @@
-# homebridge-nexia-thermostat-ts
+# homebridge-nexia-american-standard-thermostat-ts
 
-This repo is a from-scratch implementation of the Homebridge interface for Nexia Thermostats.
+This repo is a from-scratch implementation of the Homebridge interface for Nexia and American Standard Thermostats.
 
 Steps to get this working:
 
