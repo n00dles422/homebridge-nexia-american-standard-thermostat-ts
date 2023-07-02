@@ -341,15 +341,21 @@ class NexiaThermostat {
   handleTargetTemperatureSet(value: any, callback: (arg0: null) => void) {
     this.log.debug('Triggered SET TargetTemperature:' + value);
     this.computeState((state: { heatingSetpoint: any; coolingSetpoint: any; mappedMode: any; setPointUrl: string, scale: number }) => {
-      const payload = { 
-        heat: this.convertTemperature(this.currentTemperatureScale, state.scale, state.heatingSetpoint), 
-        cool: this.convertTemperature(this.currentTemperatureScale, state.scale, state.coolingSetpoint) 
-      }
+      // const payload = { 
+      //   heat: this.convertTemperature(this.currentTemperatureScale, state.scale, state.heatingSetpoint), 
+      //   cool: this.convertTemperature(this.currentTemperatureScale, state.scale, state.coolingSetpoint) 
+      // }
+
+      let payload;
       const thermostatTemperature = this.convertTemperature(this.currentTemperatureScale, state.scale, value);
       if (state.mappedMode == this.Characteristic.CurrentHeatingCoolingState.HEAT) {
-        payload.heat = thermostatTemperature;
+        payload = { 
+          heat: thermostatTemperature
+        }
       } else if (state.mappedMode == this.Characteristic.CurrentHeatingCoolingState.COOL) {
-        payload.cool = thermostatTemperature;
+        payload = { 
+          cool: thermostatTemperature
+        }
       } else {
         payload.heat = thermostatTemperature;
         payload.cool = thermostatTemperature;
