@@ -346,7 +346,7 @@ class NexiaThermostat {
       //   cool: this.convertTemperature(this.currentTemperatureScale, state.scale, state.coolingSetpoint) 
       // }
 
-      let payload;
+      let payload = {};
       const thermostatTemperature = this.convertTemperature(this.currentTemperatureScale, state.scale, value);
       if (state.mappedMode == this.Characteristic.CurrentHeatingCoolingState.HEAT) {
         payload = { 
@@ -357,8 +357,10 @@ class NexiaThermostat {
           cool: thermostatTemperature
         }
       } else {
-        payload.heat = thermostatTemperature;
-        payload.cool = thermostatTemperature;
+        payload = { 
+          heat: thermostatTemperature, 
+          cool: thermostatTemperature
+        }
       }
       this.log.debug("payload temperature set", payload);
       this.makePostRequest(state.setPointUrl, payload)()
